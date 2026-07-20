@@ -46,16 +46,9 @@ npm run test
 
 ## 🌐 Deployment
 
-This project is configured to automatically deploy to **GitHub Pages** via GitHub Actions upon any push to the `main` branch. 
+This project is configured to automatically deploy to **GitHub Pages** via GitHub Actions upon any push to the `main` branch.
 
 The Vite configuration includes a `base: '/rulespace/'` path to correctly resolve assets on the GitHub Pages subpath.
-
-## 🎨 Branding
-
-The primary colors used in the app are:
-- **Primary Blue:** `#3A7EAB`
-- **Accent Coral:** `#CF4832`
-- **Neutral Gray:** `#D1D3D4`
 
 ---
 <div align="center">
