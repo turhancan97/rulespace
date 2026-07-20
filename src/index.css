@@ -3,13 +3,29 @@
   line-height: 1.5;
   font-weight: 400;
   color-scheme: light dark;
-  background-color: #f4f4f5;
-  color: #27272a;
+  --bg-color: #f4f4f5;
+  --text-color: #27272a;
+  --text-muted: #6b7280;
+  --primary-color: #3A7EAB;
+  --accent-color: #CF4832;
+  --neutral-color: #D1D3D4;
+  --card-bg: #ffffff;
+  --border-color: #e5e7eb;
+  background-color: var(--bg-color);
+  color: var(--text-color);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    background-color: #18181b;
-    color: #e4e4e7;
+    --bg-color: #121212;
+    --text-color: #e4e4e7;
+    --text-muted: #a1a1aa;
+    --primary-color: #4A90E2;
+    --accent-color: #FF5A3D;
+    --neutral-color: #3f3f46;
+    --card-bg: #18181b;
+    --border-color: #27272a;
+    background-color: var(--bg-color);
+    color: var(--text-color);
   }
 }
 body {

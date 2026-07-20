@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import logoLight from './assets/rulespace-logo-lockup.svg';
+import logoDark from './assets/rulespace-logo-lockup-dark.svg';
 import { CanvasRenderer } from './components/Renderer/CanvasRenderer';
 import { Controls } from './components/Controls/Controls';
 import { RuleInput } from './components/Rules/RuleInput';
@@ -183,13 +185,16 @@ function App() {
     <div style={{ maxWidth: '1000px', margin: '40px auto', display: 'flex', flexDirection: 'column', gap: '20px', padding: '0 20px' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 style={{ color: '#3A7EAB', margin: '0 0 8px 0' }}>Rulespace</h1>
-          <p style={{ color: '#6b7280', margin: 0 }}>Custom rules. Emergent life.</p>
+          <picture>
+            <source srcSet={logoDark} media="(prefers-color-scheme: dark)" />
+            <img src={logoLight} alt="Rulespace Logo" style={{ height: '48px', marginBottom: '8px' }} />
+          </picture>
+          <p style={{ color: 'var(--text-muted)', margin: 0, fontWeight: 500, paddingLeft: '4px' }}>Custom rules. Emergent life.</p>
         </div>
         <ShareButton grid={appState.grid} width={appState.width} height={appState.height} rule={appState.rule} />
       </header>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4b5563', fontSize: '14px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '14px', fontWeight: 500, paddingLeft: '4px' }}>
         <span>Generation: {appState.generation}</span>
       </div>
 
