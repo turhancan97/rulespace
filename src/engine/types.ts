@@ -14,5 +14,5 @@ export type AppState = {
   generation: number;
   isRunning: boolean;
   speed: number;
-  history: string[];
+  history: import('./cycle').GridHistoryEntry[];
 };

@@ -5,31 +5,18 @@ import { Rule } from './types';
  * Example: 'B3/S23' -> { born: [3], survive: [2, 3] }
  */
 export function parseRule(ruleString: string): Rule {
-  const defaultRule: Rule = { born: [3], survive: [2, 3] }; // Conway's default
-  
-  if (!ruleString) return defaultRule;
+  const normalized = ruleString.trim().toUpperCase();
+  const bsMatch = /^B([0-8]*)\/S([0-8]*)$/.exec(normalized);
+  const alternateMatch = /^([0-8]*)\/([0-8]*)$/.exec(normalized);
 
-  const parts = ruleString.toUpperCase().split('/');
-  
-  let bornStr = '';
-  let surviveStr = '';
-
-  for (const part of parts) {
-    if (part.startsWith('B')) {
-      bornStr = part.slice(1);
-    } else if (part.startsWith('S')) {
-      surviveStr = part.slice(1);
-    }
+  if (!bsMatch && !alternateMatch) {
+    throw new Error(`Invalid rule string: ${ruleString}`);
   }
 
-  // Handle alternative notation e.g., '23/3' (Survive/Born)
-  if (parts.length === 2 && !parts[0].startsWith('B') && !parts[0].startsWith('S')) {
-      surviveStr = parts[0];
-      bornStr = parts[1];
-  }
-
-  const parseNumbers = (str: string) => 
-    str.split('').map(n => parseInt(n, 10)).filter(n => !isNaN(n));
+  const bornStr = bsMatch?.[1] ?? alternateMatch?.[2] ?? '';
+  const surviveStr = bsMatch?.[2] ?? alternateMatch?.[1] ?? '';
+  const parseNumbers = (value: string) =>
+    [...new Set(value.split('').map(Number))].sort((first, second) => first - second);
 
   return {
     born: parseNumbers(bornStr),
@@ -41,5 +28,6 @@ export function parseRule(ruleString: string): Rule {
  * Converts a Rule object back to a B/S string.
  */
 export function ruleToString(rule: Rule): string {
-  return `B${rule.born.join('')}/S${rule.survive.join('')}`;
+  const normalize = (values: number[]) => [...new Set(values)].filter((value) => value >= 0 && value <= 8).sort((a, b) => a - b);
+  return `B${normalize(rule.born).join('')}/S${normalize(rule.survive).join('')}`;
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type FC } from 'react';
 import { Grid, Rule } from '../../engine/types';
 import { encodeURLState } from '../../codec/rle';
 
@@ -9,37 +9,34 @@ interface ShareButtonProps {
   rule: Rule;
 }
 
-export const ShareButton: React.FC<ShareButtonProps> = ({ grid, width, height, rule }) => {
+export const ShareButton: FC<ShareButtonProps> = ({ grid, width, height, rule }) => {
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState(false);
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const b64 = encodeURLState(grid, width, height, rule);
     const url = new URL(window.location.href);
     url.searchParams.set('state', b64);
     
-    navigator.clipboard.writeText(url.toString()).then(() => {
+    try {
+      await navigator.clipboard.writeText(url.toString());
       setCopied(true);
+      setError(false);
       setTimeout(() => setCopied(false), 2000);
-    });
+    } catch {
+      setError(true);
+      setCopied(false);
+      setTimeout(() => setError(false), 3000);
+    }
   };
 
   return (
     <button
       onClick={handleShare}
-      style={{
-        backgroundColor: '#f3f4f6',
-        color: '#374151',
-        border: '1px solid #d1d5db',
-        padding: '8px 16px',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontWeight: 500,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px'
-      }}
+      className="button"
+      aria-live="polite"
     >
-      {copied ? 'Copied to Clipboard!' : 'Share URL'}
+      {copied ? 'Copied to Clipboard!' : error ? 'Clipboard unavailable' : 'Share URL'}
     </button>
   );
 };

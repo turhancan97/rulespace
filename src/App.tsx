@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import logoLight from './assets/rulespace-logo-lockup.svg';
 import logoDark from './assets/rulespace-logo-lockup-dark.svg';
 import { CanvasRenderer } from './components/Renderer/CanvasRenderer';
@@ -9,19 +9,13 @@ import { ShareButton } from './components/Share/ShareButton';
 import { StatsPanel } from './components/Stats/StatsPanel';
 import { createGrid } from './engine/grid';
 import { step } from './engine/step';
-import { parseRule } from './engine/ruleParser';
-import { AppState, Grid } from './engine/types';
+import { parseRule, ruleToString } from './engine/ruleParser';
+import { AppState } from './engine/types';
 import { PATTERNS } from './patterns';
 import { decodeURLState } from './codec/rle';
-import { hashGrid } from './engine/hash';
-
-function countPopulation(grid: Grid) {
-  let p = 0;
-  for(let i=0; i<grid.length; i++) p += grid[i];
-  return p;
-}
-
-const HISTORY_SIZE = 50;
+import { appendHistory, createHistoryEntry, findCyclePeriod, HISTORY_SIZE } from './engine/cycle';
+import { appendPopulationHistory, countPopulation, resetPopulationHistory } from './engine/analytics';
+import { useSimulationLoop } from './hooks/useSimulationLoop';
 
 function App() {
   const width = 60;
@@ -41,8 +35,8 @@ function App() {
           generation: 0,
           isRunning: false,
           speed: 15,
-          history: [],
-          popHistory: [countPopulation(decoded.grid)],
+          history: [createHistoryEntry(decoded.grid)],
+          popHistory: resetPopulationHistory(decoded.grid),
           cyclePeriod: null
         };
       }
@@ -57,35 +51,21 @@ function App() {
       generation: 0,
       isRunning: false,
       speed: 15,
-      history: [],
-      popHistory: [0],
+      history: [createHistoryEntry(initGrid)],
+      popHistory: resetPopulationHistory(initGrid),
       cyclePeriod: null
     };
   });
 
   const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
 
-  const requestRef = useRef<number>();
-  const lastUpdateRef = useRef<number>(0);
-
-  const stateRef = useRef(appState);
-  stateRef.current = appState;
-
   const performStep = useCallback(() => {
     setAppState(prev => {
       const nextGrid = step(prev.grid, prev.width, prev.height, prev.rule);
-      const nextHash = hashGrid(nextGrid);
       const pop = countPopulation(nextGrid);
-      
-      // Cycle detection
-      let cyclePeriod = null;
-      const idx = prev.history.indexOf(nextHash);
-      if (idx !== -1) {
-        cyclePeriod = prev.history.length - idx;
-      }
-      
-      const newHistory = [...prev.history, nextHash].slice(-HISTORY_SIZE);
-      const newPopHistory = [...prev.popHistory, pop].slice(-HISTORY_SIZE);
+      const cyclePeriod = findCyclePeriod(prev.history, nextGrid);
+      const newHistory = appendHistory(prev.history, nextGrid);
+      const newPopHistory = appendPopulationHistory(prev.popHistory, pop, HISTORY_SIZE);
 
       return {
         ...prev,
@@ -98,42 +78,22 @@ function App() {
     });
   }, []);
 
-  const gameLoop = useCallback((time: number) => {
-    if (!stateRef.current.isRunning) return;
-
-    const timeSinceLastUpdate = time - lastUpdateRef.current;
-    const updateInterval = 1000 / stateRef.current.speed;
-
-    if (timeSinceLastUpdate >= updateInterval) {
-      performStep();
-      lastUpdateRef.current = time;
-    }
-
-    requestRef.current = requestAnimationFrame(gameLoop);
-  }, [performStep]);
-
-  useEffect(() => {
-    if (appState.isRunning) {
-      requestRef.current = requestAnimationFrame(gameLoop);
-    } else {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    }
-    return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
-  }, [appState.isRunning, gameLoop]);
+  useSimulationLoop({ isRunning: appState.isRunning, speed: appState.speed, onTick: performStep });
 
   const handlePlayPause = () => setAppState(prev => ({ ...prev, isRunning: !prev.isRunning }));
   const handleStep = () => performStep();
-  const handleClear = () => setAppState(prev => ({ 
-    ...prev, 
-    grid: createGrid(prev.width, prev.height), 
-    generation: 0, 
-    isRunning: false,
-    history: [],
-    popHistory: [0],
-    cyclePeriod: null
-  }));
+  const handleClear = () => setAppState(prev => {
+    const grid = createGrid(prev.width, prev.height);
+    return {
+      ...prev,
+      grid,
+      generation: 0,
+      isRunning: false,
+      history: [createHistoryEntry(grid)],
+      popHistory: resetPopulationHistory(grid),
+      cyclePeriod: null,
+    };
+  });
   const handleRandomize = () => {
     const newGrid = createGrid(width, height);
     for (let i = 0; i < newGrid.length; i++) {
@@ -141,10 +101,10 @@ function App() {
     }
     setAppState(prev => ({ 
       ...prev, 
-      grid: newGrid, 
+      grid: newGrid,
       generation: 0,
-      history: [],
-      popHistory: [countPopulation(newGrid)],
+      history: [createHistoryEntry(newGrid)],
+      popHistory: resetPopulationHistory(newGrid),
       cyclePeriod: null
     }));
   };
@@ -174,44 +134,47 @@ function App() {
       return { 
         ...prev, 
         grid: newGrid,
-        history: [], // reset cycle detection on edit
+        history: [createHistoryEntry(newGrid)],
         cyclePeriod: null,
-        popHistory: [...prev.popHistory, countPopulation(newGrid)].slice(-HISTORY_SIZE)
+        popHistory: appendPopulationHistory(prev.popHistory, countPopulation(newGrid), HISTORY_SIZE)
       };
     });
   };
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '40px auto', display: 'flex', flexDirection: 'column', gap: '20px', padding: '0 20px' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <main className="app-shell">
+      <header className="app-header">
         <div>
-          <picture>
+          <picture className="logo">
             <source srcSet={logoDark} media="(prefers-color-scheme: dark)" />
-            <img src={logoLight} alt="Rulespace Logo" style={{ height: '48px', marginBottom: '8px' }} />
+            <img src={logoLight} alt="Rulespace Logo" />
           </picture>
-          <p style={{ color: 'var(--text-muted)', margin: 0, fontWeight: 500, paddingLeft: '4px' }}>Custom rules. Emergent life.</p>
+          <p className="tagline">Custom rules. Emergent life.</p>
         </div>
         <ShareButton grid={appState.grid} width={appState.width} height={appState.height} rule={appState.rule} />
       </header>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '14px', fontWeight: 500, paddingLeft: '4px' }}>
+      <div className="generation">
         <span>Generation: {appState.generation}</span>
       </div>
 
       <RuleInput 
+        key={ruleToString(appState.rule)}
         currentRule={appState.rule} 
-        onRuleChange={(rule) => setAppState(prev => ({ ...prev, rule, history: [], cyclePeriod: null }))} 
+        onRuleChange={(rule) => setAppState(prev => ({ ...prev, rule, history: [createHistoryEntry(prev.grid)], cyclePeriod: null }))}
       />
 
-      <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-        <CanvasRenderer 
-          grid={appState.grid} 
-          width={appState.width} 
-          height={appState.height} 
-          cellSize={12} 
-          onCanvasClick={handleCanvasClick}
-        />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '250px' }}>
+      <div className="workspace">
+        <div className="canvas-scroll">
+          <CanvasRenderer
+            grid={appState.grid}
+            width={appState.width}
+            height={appState.height}
+            cellSize={12}
+            onCanvasClick={handleCanvasClick}
+          />
+        </div>
+        <div className="sidebar">
           <StatsPanel 
             population={appState.popHistory[appState.popHistory.length - 1] || 0}
             history={appState.popHistory}
@@ -233,7 +196,7 @@ function App() {
         speed={appState.speed}
         onSpeedChange={handleSpeedChange}
       />
-    </div>
+    </main>
   );
 }
 

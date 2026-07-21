@@ -46,6 +46,16 @@ export function encodeRLE(grid: Grid, width: number, height: number): string {
 }
 
 export function decodeRLE(rle: string, width: number, height: number): Grid {
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+    throw new Error('Grid dimensions must be positive integers');
+  }
+  if (!rle.endsWith('!') || !/^[0-9bo$!]+$/.test(rle)) {
+    throw new Error('Invalid simplified RLE data');
+  }
+  if (rle.indexOf('!') !== rle.length - 1) {
+    throw new Error('RLE terminator must be final');
+  }
+
   const grid = new Uint8Array(width * height);
   let x = 0;
   let y = 0;
@@ -55,26 +65,30 @@ export function decodeRLE(rle: string, width: number, height: number): Grid {
     const char = rle[i];
     
     if (char >= '0' && char <= '9') {
+      if (char === '0' && runCount === 0) throw new Error('RLE run counts must be positive');
       runCount = runCount * 10 + parseInt(char, 10);
       continue;
     }
     
+    const hasRunCount = runCount > 0;
     const count = runCount || 1;
     runCount = 0;
-    
+
     if (char === 'b') {
+      if (y >= height || x + count > width) throw new Error('RLE data exceeds grid bounds');
       x += count;
     } else if (char === 'o') {
+      if (y >= height || x + count > width) throw new Error('RLE data exceeds grid bounds');
       for (let c = 0; c < count; c++) {
-        if (x < width && y < height) {
-          grid[y * width + x] = 1;
-        }
+        grid[y * width + x] = 1;
         x++;
       }
     } else if (char === '$') {
+      if (y + count >= height) throw new Error('RLE data exceeds grid bounds');
       y += count;
       x = 0;
     } else if (char === '!') {
+      if (hasRunCount) throw new Error('RLE run count is missing a cell state');
       break;
     }
   }
@@ -87,21 +101,24 @@ export function encodeURLState(grid: Grid, width: number, height: number, rule: 
   const ruleStr = ruleToString(rule);
   // combine and base64
   const payload = JSON.stringify({ r: ruleStr, g: rle });
-  return btoa(payload);
+  return btoa(payload).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 export function decodeURLState(base64: string, width: number, height: number): { grid: Grid, rule: Rule } | null {
   try {
-    const payload = atob(base64);
-    const parsed = JSON.parse(payload);
-    if (parsed.r && parsed.g) {
-      return {
-        rule: parseRule(parsed.r),
-        grid: decodeRLE(parsed.g, width, height)
-      };
-    }
-  } catch (e) {
-    console.error('Failed to decode URL state');
+    if (!/^[A-Za-z0-9_-]+$/.test(base64)) return null;
+    const standardBase64 = base64.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(base64.length / 4) * 4, '=');
+    const parsed: unknown = JSON.parse(atob(standardBase64));
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    const { r, g } = parsed as { r?: unknown; g?: unknown };
+    if (typeof r !== 'string' || typeof g !== 'string') return null;
+
+    return {
+      rule: parseRule(r),
+      grid: decodeRLE(g, width, height),
+    };
+  } catch {
+    return null;
   }
-  return null;
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import type { FC } from 'react';
 
 interface ControlsProps {
   isRunning: boolean;
@@ -10,7 +10,7 @@ interface ControlsProps {
   onSpeedChange: (speed: number) => void;
 }
 
-export const Controls: React.FC<ControlsProps> = ({
+export const Controls: FC<ControlsProps> = ({
   isRunning,
   onPlayPause,
   onStep,
@@ -20,77 +20,35 @@ export const Controls: React.FC<ControlsProps> = ({
   onSpeedChange
 }) => {
   return (
-    <div style={{
-      display: 'flex',
-      gap: '12px',
-      padding: '16px',
-      backgroundColor: '#ffffff',
-      border: '1px solid #d1d5db',
-      borderRadius: '8px',
-      boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-      alignItems: 'center',
-      flexWrap: 'wrap'
-    }}>
-      <button 
+    <section className="card controls" aria-label="Simulation controls">
+      <button
         onClick={onPlayPause}
-        style={{
-          backgroundColor: '#3A7EAB', // Primary blue
-          color: 'white',
-          border: 'none',
-          padding: '8px 16px',
-          borderRadius: '6px',
-          cursor: 'pointer',
-          fontWeight: 600
-        }}
+        className="button button-primary"
       >
         {isRunning ? 'Pause' : 'Play'}
       </button>
-      <button 
-        onClick={onStep} 
+      <button
+        onClick={onStep}
         disabled={isRunning}
-        style={{
-          backgroundColor: '#e5e7eb',
-          color: '#374151',
-          border: '1px solid #d1d5db',
-          padding: '8px 16px',
-          borderRadius: '6px',
-          cursor: isRunning ? 'not-allowed' : 'pointer',
-          fontWeight: 500
-        }}
+        className="button"
       >
         Step
       </button>
-      <button 
+      <button
         onClick={onRandomize}
-        style={{
-          backgroundColor: '#e5e7eb',
-          color: '#374151',
-          border: '1px solid #d1d5db',
-          padding: '8px 16px',
-          borderRadius: '6px',
-          cursor: 'pointer',
-          fontWeight: 500
-        }}
+        className="button"
       >
         Random
       </button>
-      <button 
+      <button
         onClick={onClear}
-        style={{
-          backgroundColor: '#fee2e2',
-          color: '#991b1b',
-          border: '1px solid #fca5a5',
-          padding: '8px 16px',
-          borderRadius: '6px',
-          cursor: 'pointer',
-          fontWeight: 500
-        }}
+        className="button button-danger"
       >
         Clear
       </button>
 
-      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <label htmlFor="speed-slider" style={{ fontSize: '14px', fontWeight: 500, color: '#374151' }}>
+      <div className="speed-control">
+        <label htmlFor="speed-slider">
           Speed: {speed} TPS
         </label>
         <input 
@@ -100,9 +58,8 @@ export const Controls: React.FC<ControlsProps> = ({
           max="60" 
           value={speed}
           onChange={(e) => onSpeedChange(Number(e.target.value))}
-          style={{ width: '120px' }}
         />
       </div>
-    </div>
+    </section>
   );
 };

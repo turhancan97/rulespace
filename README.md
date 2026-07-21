@@ -15,7 +15,7 @@
 - **Custom Rules**: Edit the rules of life on the fly using standard `B/S` notation (e.g., Conway's `B3/S23`, HighLife `B36/S23`, Day & Night `B3678/S34678`).
 - **Pattern Library**: Click-to-place integration of famous patterns like the Gosper Glider Gun, Pulsar, and more.
 - **Analytics**: Real-time population tracking, graphing, and infinite cycle detection.
-- **URL Sharing**: Share interesting states instantly via encoded Base64 URL parameters.
+- **URL Sharing**: Share interesting states instantly via URL-safe Base64 query parameters.
 - **High Performance**: Toroidal array-backed grid simulation optimized for consistent 60fps rendering.
 
 ## 🏗️ Architecture
@@ -25,7 +25,7 @@ Rulespace strictly separates concerns to maintain high performance and clean cod
 1. **Engine (`src/engine/`)**: Pure TypeScript, zero DOM dependencies. Handles the Toroidal Grid operations, B/S rule parsing, and step simulation logic. Unit tested via Vitest.
 2. **Renderer (`src/components/Renderer/`)**: React wrapper for HTML Canvas. Uses `requestAnimationFrame` for efficient drawing.
 3. **UI (`src/components/`)**: React components for play controls, stats, pattern selection, and rule input.
-4. **Codec (`src/codec/`)**: Fast RLE (Run Length Encoding) mechanism that compresses grid state into Base64 strings for URL query parameters.
+4. **Codec (`src/codec/`)**: Fast, validated simplified RLE (Run Length Encoding) mechanism that compresses grid state into URL-safe Base64 strings for query parameters. It intentionally supports Rulespace's raw `b`/`o`/`$`/`!` format only, not standard RLE headers or comments.
 
 ## 💻 Development
 

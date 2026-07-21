@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import { useEffect, useRef, type FC, type MouseEvent } from 'react';
 import { Grid } from '../../engine/types';
 
 interface CanvasRendererProps {
@@ -9,7 +9,7 @@ interface CanvasRendererProps {
   onCanvasClick?: (x: number, y: number) => void;
 }
 
-export const CanvasRenderer: React.FC<CanvasRendererProps> = ({ 
+export const CanvasRenderer: FC<CanvasRendererProps> = ({
   grid, 
   width, 
   height, 
@@ -21,39 +21,42 @@ export const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    let frameId = 0;
 
-    // Draw the grid
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.fillStyle = '#CF4832'; // Coral accent color from PRD for live cells
+    frameId = requestAnimationFrame(() => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      const styles = getComputedStyle(canvas);
 
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (grid[y * width + x] === 1) {
-          ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = styles.getPropertyValue('--cell-color').trim();
+
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          if (grid[y * width + x] === 1) {
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
         }
       }
-    }
 
-    // Draw grid lines
-    ctx.strokeStyle = '#e5e7eb'; // light gray
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    for (let x = 0; x <= width; x++) {
-      ctx.moveTo(x * cellSize, 0);
-      ctx.lineTo(x * cellSize, height * cellSize);
-    }
-    for (let y = 0; y <= height; y++) {
-      ctx.moveTo(0, y * cellSize);
-      ctx.lineTo(width * cellSize, y * cellSize);
-    }
-    ctx.stroke();
+      ctx.strokeStyle = styles.getPropertyValue('--grid-line-color').trim();
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      for (let x = 0; x <= width; x += 1) {
+        ctx.moveTo(x * cellSize, 0);
+        ctx.lineTo(x * cellSize, height * cellSize);
+      }
+      for (let y = 0; y <= height; y += 1) {
+        ctx.moveTo(0, y * cellSize);
+        ctx.lineTo(width * cellSize, y * cellSize);
+      }
+      ctx.stroke();
+    });
 
+    return () => cancelAnimationFrame(frameId);
   }, [grid, width, height, cellSize]);
 
-  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleClick = (e: MouseEvent<HTMLCanvasElement>) => {
     if (!onCanvasClick) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -69,13 +72,7 @@ export const CanvasRenderer: React.FC<CanvasRendererProps> = ({
       onClick={handleClick}
       width={width * cellSize}
       height={height * cellSize}
-      style={{ 
-        display: 'block',
-        backgroundColor: '#ffffff',
-        border: '1px solid #d1d5db',
-        borderRadius: '8px',
-        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
-      }}
+      className="life-canvas"
     />
   );
 };
