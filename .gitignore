@@ -27,6 +27,13 @@ dist-ssr
 # Test
 coverage
 
+# TypeScript incremental build metadata
+*.tsbuildinfo
+
+# Generated Vite configuration artifacts
+vite.config.js
+vite.config.d.ts
+
 # Env
 .env
 .env.local
