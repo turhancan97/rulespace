@@ -1,4 +1,4 @@
-import { useEffect, useRef, type FC, type MouseEvent } from 'react';
+import { useLayoutEffect, useRef, type FC, type MouseEvent } from 'react';
 import { Grid } from '../../engine/types';
 
 interface CanvasRendererProps {
@@ -18,40 +18,53 @@ export const CanvasRenderer: FC<CanvasRendererProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  useEffect(() => {
+  // Setting canvas dimensions clears its drawing buffer. Keep this separate
+  // from grid updates so the previous frame remains visible until rAF draws
+  // the next generation.
+  useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    let frameId = 0;
 
-    frameId = requestAnimationFrame(() => {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+    canvas.width = width * cellSize;
+    canvas.height = height * cellSize;
+  }, [width, height, cellSize]);
+
+  useLayoutEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const draw = () => {
+      const context = canvas.getContext('2d');
+      if (!context) return;
       const styles = getComputedStyle(canvas);
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = styles.getPropertyValue('--cell-color').trim();
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = styles.getPropertyValue('--cell-color').trim();
 
       for (let y = 0; y < height; y += 1) {
         for (let x = 0; x < width; x += 1) {
           if (grid[y * width + x] === 1) {
-            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            context.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
           }
         }
       }
 
-      ctx.strokeStyle = styles.getPropertyValue('--grid-line-color').trim();
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
+      context.strokeStyle = styles.getPropertyValue('--grid-line-color').trim();
+      context.lineWidth = 0.5;
+      context.beginPath();
       for (let x = 0; x <= width; x += 1) {
-        ctx.moveTo(x * cellSize, 0);
-        ctx.lineTo(x * cellSize, height * cellSize);
+        context.moveTo(x * cellSize, 0);
+        context.lineTo(x * cellSize, height * cellSize);
       }
       for (let y = 0; y <= height; y += 1) {
-        ctx.moveTo(0, y * cellSize);
-        ctx.lineTo(width * cellSize, y * cellSize);
+        context.moveTo(0, y * cellSize);
+        context.lineTo(width * cellSize, y * cellSize);
       }
-      ctx.stroke();
-    });
+      context.stroke();
+    };
+
+    draw();
+    const frameId = requestAnimationFrame(draw);
 
     return () => cancelAnimationFrame(frameId);
   }, [grid, width, height, cellSize]);
@@ -70,8 +83,6 @@ export const CanvasRenderer: FC<CanvasRendererProps> = ({
     <canvas
       ref={canvasRef}
       onClick={handleClick}
-      width={width * cellSize}
-      height={height * cellSize}
       className="life-canvas"
     />
   );
